@@ -1,0 +1,112 @@
+configure
+edit firewall
+
+set all-ping enable
+set broadcast-ping disable
+set ipv6-receive-redirects disable
+set ipv6-src-route disable
+set ip-src-route disable
+set log-martians enable
+set receive-redirects disable
+set send-redirects enable
+set source-validation disable
+set syn-cookies enable
+
+edit ipv6-name WANv6_IN
+set default-action drop
+set description "WAN inbound traffic forwarded to LAN"
+set rule 10 action accept 
+set rule 10 description "Allow established/related"
+set rule 10 state established enable
+set rule 10 state related enable
+set rule 20 action drop
+set rule 20 description "Drop invalid state"
+set rule 20 state invalid enable
+set rule 30 action accept
+set rule 30 description "Allow ICMPv6"
+set rule 30 log disable
+set rule 30 protocol icmpv6
+up
+
+edit ipv6-name WANv6_LOCAL
+set default-action drop
+set description "WAN inbound traffic to the router"
+set  rule 10 action accept
+set  rule 10 description "Allow established/related"
+set  rule 10 state established enable
+set  rule 10 state related enable
+set  rule 20 action drop
+set  rule 20 description "Drop invalid state"
+set  rule 20 state invalid enable
+set  rule 30 action accept
+set  rule 30 description "Allow ICMPv6"
+set  rule 30 log disable
+set  rule 30 protocol icmpv6
+set  rule 40 action accept
+set  rule 40 description "Allow DHCPv6"
+set  rule 40 destination port 546
+set  rule 40 protocol udp
+set  rule 40 source port 547
+up
+
+edit ipv6-name WANv6_OUT
+set  default-action accept
+set  description "WAN outbound traffic"
+set  rule 10 action accept
+set  rule 10 description "Allow established/related"
+set  rule 10 state established enable
+set  rule 10 state related enable
+set  rule 20 action reject
+set  rule 20 description "Reject invalid state"
+set  rule 20 state invalid enable
+up
+
+up
+
+commit 
+save
+
+set service dhcpv6-relay listen-interface eth2
+set service dhcpv6-relay upstream-interface eth0
+set service dhcpv6-relay use-interface-id-option
+
+commit
+save
+
+
+set interfaces ethernet eth0 dhcpv6-pd rapid-commit enable
+set interfaces ethernet eth0 dhcpv6-pd pd 0 interface eth2 host-address ::1
+set interfaces ethernet eth0 dhcpv6-pd pd 0 interface eth2 prefix-id :0
+set interfaces ethernet eth0 dhcpv6-pd pd 0 interface eth2 service slaac
+set interfaces ethernet eth0 dhcpv6-pd pd 0 prefix-length /56
+
+ commit
+ save
+ 
+ 
+ set interfaces ethernet eth0 firewall in ipv6-name WANv6_IN
+ set interfaces ethernet eth0 firewall local ipv6-name WANv6_LOCAL
+ set interfaces ethernet eth0 firewall out ipv6-name WANv6_OUT
+ set service dns forwarding name-server 8.8.8.8
+ set service dns forwarding name-server 8.8.4.4
+ set service dns forwarding name-server 2001:4860:4860::8888
+ set service dns forwarding name-server 2001:4860:4860::8844
+ set service nat rule 5000 log disable
+ set service nat rule 5000 protocol all
+ set service nat rule 5002 log disable
+ set service nat rule 5002 protocol all
+ set service upnp2 listen-on eth2
+ set service upnp2 nat-pmp disable
+ set service upnp2 secure-mode enable
+ set service upnp2 wan eth0
+ 
+ commit 
+ save
+ 
+ 
+ exit
+ 
+ 
+ 
+ 
+
